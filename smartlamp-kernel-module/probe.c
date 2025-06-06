@@ -16,6 +16,7 @@ static int usb_max_size;                           // Tamanho máximo de uma men
 
 
 
+
 #define VENDOR_ID 0x10c4 /* Encontre o VendorID  do smartlamp */
 #define PRODUCT_ID 0xea60 /* Encontre o ProductID do smartlamp */
 static const struct usb_device_id id_table[] = { { USB_DEVICE(VENDOR_ID, PRODUCT_ID) }, {} };
@@ -53,7 +54,7 @@ static int usb_probe(struct usb_interface *interface, const struct usb_device_id
     return 0;
 }
 
-// Executado quando o dispositivo USB é desconectado da USB
+// Executado quando o dispositivo USB é desconectado da USB.
 static void usb_disconnect(struct usb_interface *interface) {
     printk(KERN_INFO "SmartLamp: Dispositivo desconectado.\n");
     kfree(usb_in_buffer);                   // Desaloca buffers
