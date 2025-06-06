@@ -80,6 +80,8 @@ static int usb_read_serial() {
             continue;
         }
 
+        printk("USB in buffer %c).\n", usb_in_buffer);
+        printk("Actual size %d).\n", &actual_size);
         //caso tenha recebido a mensagem 'RES_LDR X' via serial acesse o buffer 'usb_in_buffer' e retorne apenas o valor da resposta X
         //retorne o valor de X em inteiro
         return 0;
