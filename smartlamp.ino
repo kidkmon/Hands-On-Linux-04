@@ -14,7 +14,7 @@ const int freq = 5000;           // Frequência do PWM em Hz
 const int resolution = 8;        // Resolução do PWM em bits (8 bits = 0-255 valores)
 
 void setup() {
-    Serial.begin(115200); // Velocidade de comunicação serial
+    Serial.begin(9600); // Velocidade de comunicação serial
 
     pinMode(ledPin, OUTPUT);
     pinMode(ldrPin, INPUT);
