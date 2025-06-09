@@ -68,6 +68,7 @@ static void usb_disconnect(struct usb_interface *interface) {
 static int usb_read_serial() {
     int ret, actual_size;
     int retries = 10;                       // Tenta algumas vezes receber uma resposta da USB. Depois desiste.
+    char responde[20];
 
     // Espera pela resposta correta do dispositivo (desiste depois de várias tentativas)
     while (retries > 0) {
@@ -79,12 +80,26 @@ static int usb_read_serial() {
             printk(KERN_ERR "SmartLamp: Erro ao ler dados da USB (tentativa %d). Codigo: %d\n", ret, retries--);
             continue;
         }
+        else{
+            printk(KERN_INFO "SmartLamp: Dados lidos da USB: %s\n", usb_in_buffer);
+            while(1){
+                //processa comando
+                ret = usb_bulk_msg(smartlamp_device, usb_rcvbulkpipe(smartlamp_device, usb_in), usb_in_buffer, min(usb_max_size, MAX_RECV_LINE), &actual_size, 1000);
 
-        printk("USB in buffer %c).\n", usb_in_buffer);
-        printk("Actual size %d).\n", &actual_size);
+                if (ret) {
+                    break;         
+                }
+                printk(KERN_INFO "SmartLamp: Dados lidos da USB: %s\n", usb_in_buffer);
+
+            }
+
+            //o commando ta aqui...
+
+        }
+
+        printk(KERN_INFO "SmartLamp: Dados lidos da USB: %s\n", usb_in_buffer);
         //caso tenha recebido a mensagem 'RES_LDR X' via serial acesse o buffer 'usb_in_buffer' e retorne apenas o valor da resposta X
         //retorne o valor de X em inteiro
-        return 0;
     }
 
     return -1; 

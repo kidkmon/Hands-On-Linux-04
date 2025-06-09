@@ -1,0 +1,10 @@
+.vscode
+*.mod.c
+*.o
+*.o.d
+*.ko
+*.mod
+*.cmd
+*.tar.xz
+Module.symvers
+modules.order
