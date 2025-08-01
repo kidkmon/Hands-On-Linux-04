@@ -37,8 +37,10 @@ static int  activate_cp210x_uart(void);
 static int  usb_write_serial(const char* command);
 static int  usb_read_serial(void);
 // Adicionados protótipos para as funções do sysfs
-static ssize_t led_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf);
 static ssize_t led_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count);
+static ssize_t led_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf);
+static ssize_t temp_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+static ssize_t hum_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 
 
 // --- Definições do Sysfs (Adicionado) ---
@@ -178,6 +180,30 @@ static int usb_read_serial(void) {
 }
 
 // --- Funções do Sysfs (Adicionadas) ---
+// Função chamada quando algo é escrito no arquivo /sys/kernel/smartlamp/led
+static ssize_t led_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) {
+    int new_value;
+    char command[32];
+
+    if (!smartlamp_device) return -ENODEV; // Verificação de segurança
+
+    if (kstrtoint(buf, 10, &new_value) != 0) return -EINVAL;
+
+    printk(KERN_INFO "SmartLamp: Alterando valor do LED para %d\n", new_value);
+
+    if (activate_cp210x_uart() < 0) return -EIO;
+
+    scnprintf(command, sizeof(command), "SET_LED %d\n", new_value);
+    
+    if (usb_write_serial(command) == 0) {
+        // Consome a resposta de confirmação ("RES SET_LED 1") para não travar
+        msleep(50);
+        usb_bulk_msg(smartlamp_device, usb_rcvbulkpipe(smartlamp_device, usb_in),
+                     usb_in_buffer, usb_max_size, NULL, 500);
+    }
+    
+    return count;
+}
 
 // Função chamada quando o arquivo /sys/kernel/smartlamp/led é lido
 static ssize_t led_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
@@ -208,27 +234,60 @@ end_show:
     return sprintf(buf, "%d\n", value);
 }
 
-// Função chamada quando algo é escrito no arquivo /sys/kernel/smartlamp/led
-static ssize_t led_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) {
-    int new_value;
-    char command[32];
+// Função chamada quando o arquivo /sys/kernel/smartlamp/temp é lido
+static ssize_t temp_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
+    int value = -1;
+    int ret, actual_size;
+    int retries = 5;
 
     if (!smartlamp_device) return -ENODEV; // Verificação de segurança
 
-    if (kstrtoint(buf, 10, &new_value) != 0) return -EINVAL;
+    if (activate_cp210x_uart() < 0) return sprintf(buf, "%d\n", -1);
 
-    printk(KERN_INFO "SmartLamp: Alterando valor do LED para %d\n", new_value);
-
-    if (activate_cp210x_uart() < 0) return -EIO;
-
-    scnprintf(command, sizeof(command), "SET_LED %d\n", new_value);
-    
-    if (usb_write_serial(command) == 0) {
-        // Consome a resposta de confirmação ("RES SET_LED 1") para não travar
-        msleep(50);
-        usb_bulk_msg(smartlamp_device, usb_rcvbulkpipe(smartlamp_device, usb_in),
-                     usb_in_buffer, usb_max_size, NULL, 500);
+    if (usb_write_serial("GET_TEMP\n") == 0) {
+        msleep(100);
+        while (retries-- > 0) {
+            ret = usb_bulk_msg(smartlamp_device, usb_rcvbulkpipe(smartlamp_device, usb_in), 
+                               usb_in_buffer, MAX_RECV_LINE - 1, &actual_size, 1000);
+            if (ret == 0) {
+                usb_in_buffer[actual_size] = '\0';
+                sscanf(usb_in_buffer, "RES GET_TEMP %d", &value);
+                printk(KERN_INFO "SmartLamp: Lendo valor da Temperatura: %d\n", value);
+                goto end_show;
+            }
+            msleep(20);
+        }
+        printk(KERN_ERR "SmartLamp: sysfs 'temp_show' falhou ao ler resposta. Erro: %d\n", ret);
     }
-    
-    return count;
+end_show:
+    return sprintf(buf, "%d\n", value);
+}
+
+// Função chamada quando o arquivo /sys/kernel/smartlamp/hum é lido
+static ssize_t hum_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
+    int value = -1;
+    int ret, actual_size;
+    int retries = 5;
+
+    if (!smartlamp_device) return -ENODEV; // Verificação de segurança
+
+    if (activate_cp210x_uart() < 0) return sprintf(buf, "%d\n", -1);
+
+    if (usb_write_serial("GET_HUM\n") == 0) {
+        msleep(100);
+        while (retries-- > 0) {
+            ret = usb_bulk_msg(smartlamp_device, usb_rcvbulkpipe(smartlamp_device, usb_in), 
+                               usb_in_buffer, MAX_RECV_LINE - 1, &actual_size, 1000);
+            if (ret == 0) {
+                usb_in_buffer[actual_size] = '\0';
+                sscanf(usb_in_buffer, "RES GET_HUM %d", &value);
+                printk(KERN_INFO "SmartLamp: Lendo valor da Umidade: %d\n", value);
+                goto end_show;
+            }
+            msleep(20);
+        }
+        printk(KERN_ERR "SmartLamp: sysfs 'hum_show' falhou ao ler resposta. Erro: %d\n", ret);
+    }
+end_show:
+    return sprintf(buf, "%d\n", value);
 }
