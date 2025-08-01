@@ -48,7 +48,7 @@ void ledUpdate(int newLedValue) {
 int ledGetValue() {
     if (ledValue < 0) return 0;
     if (ledValue > 255) return 100;
-    return (int)((ledValue * 100) + 127) / 255; // gambiarra pra truncar
+    return (int)(ledValue * 100) / 255;
 }
 
 int ldrGetValue() {
