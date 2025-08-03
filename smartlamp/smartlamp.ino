@@ -1,21 +1,36 @@
+#include <Adafruit_Sensor.h>
+#include <DHT.h>
+#include <DHT_U.h>
+
+#define DHTTYPE DHT11
+
+
 int ledPin = 5;
 int ledValue = 10;
-int ldrPin = 2;
+int dhtPin = 15;
+int ldrPin = 4;
 int ldrMax = 4000;
+int dhtMax = 4000;
+
+
+DHT dht(dhtPin, DHTTYPE);
 
 void setup() {
     Serial.begin(115200);
     pinMode(ledPin, OUTPUT);
     pinMode(ldrPin, INPUT);
+    dht.begin();
     Serial.println("SmartLamp Initialized and Ready.");
 }
 
 void loop() {
+    delay(2000);  
     if (Serial.available()) {
         String command = Serial.readStringUntil('\n');
         command.trim(); // Remove espaços em branco extras
         processCommand(command);
-    }
+    }  
+    
 }
 
 void processCommand(String command) {
@@ -35,6 +50,12 @@ void processCommand(String command) {
     else if (command == "GET_LDR") {
         Serial.printf("RES GET_LDR %d\n", ldrGetValue());
     }
+    else if (command == "GET_TEMP") {
+        Serial.printf("RES GET_TEMP %f\n", tempGetValue());
+    }
+    else if (command == "GET_HUM") {
+        Serial.printf("RES GET_HUM %f\n", humGetValue());
+    }
     else {
         Serial.println("ERR Unknown command.");
     }
@@ -48,7 +69,7 @@ void ledUpdate(int newLedValue) {
 int ledGetValue() {
     if (ledValue < 0) return 0;
     if (ledValue > 255) return 100;
-    return (int)((ledValue * 100) + 127) / 255;
+    return (int)(ledValue * 100) / 255;
 }
 
 int ldrGetValue() {
@@ -56,4 +77,14 @@ int ldrGetValue() {
     if (ldrValue < 0) return 0;
     if (ldrValue > ldrMax) return 100;
     return (int)(ldrValue * 100) / 4000;
+}
+
+float tempGetValue(){
+  float temperature = dht.readTemperature();
+  return temperature;
+}
+
+float humGetValue(){
+  float humidity = dht.readHumidity();
+  return humidity;
 }
