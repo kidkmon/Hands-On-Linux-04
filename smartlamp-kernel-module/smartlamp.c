@@ -1,8 +1,8 @@
 #include <linux/module.h>
-#include <linux/usb.h>
-#include <linux/slab.h>
 #include <linux/kernel.h>
-#include <linux/delay.h>
+#include <linux/usb.h> // comunicacao usb
+#include <linux/slab.h> // kmalloc
+#include <linux/delay.h> // msleep
 #include <linux/kobject.h> // Adicionado para sysfs
 #include <linux/sysfs.h>   // Adicionado para sysfs
 
@@ -13,12 +13,12 @@ MODULE_LICENSE("GPL");
 #define MAX_RECV_LINE 100
 
 // --- Variáveis Globais ---
-static struct usb_device *smartlamp_device;
+static struct usb_device *smartlamp_device; // ponteiro para armazenar a ref do disp. usb fisico quando eh  conectado
 static uint usb_in, usb_out;
-static char *usb_in_buffer, *usb_out_buffer;
+static char *usb_in_buffer, *usb_out_buffer; // enviar comandos e receber respostas
 static int usb_max_size;
 int LDR_value = 0;
-static struct kobject *smartlamp_kobj; // Adicionado para sysfs
+static struct kobject *smartlamp_kobj; // adicionado para sysfs, representa dir /sys/kernel/smartlamp
 
 // --- Comandos de Controle para o Chip CP210x ---
 #define CP210X_IFC_ENABLE 0x00
@@ -31,6 +31,7 @@ static const struct usb_device_id id_table[] = { { USB_DEVICE(VENDOR_ID, PRODUCT
 MODULE_DEVICE_TABLE(usb, id_table);
 
 // --- Protótipos das Funções ---
+// kobj_attribute define um arquivo no sysfs
 static int  usb_probe(struct usb_interface *ifce, const struct usb_device_id *id);
 static void usb_disconnect(struct usb_interface *ifce);
 static int  smartlamp_transaction(const char* command, char *response_buf); // funcao de comunicacao unificada
@@ -42,6 +43,7 @@ static ssize_t ldr_show(struct kobject *kobj, struct kobj_attribute *attr, char 
 
 
 // --- Definições do Sysfs (Adicionado) ---
+// __attr eh um macro que junta o nome do arquivo, as permissoes e as funcoes que vao ser chamada pra ler e escrever
 static struct kobj_attribute led_attribute = __ATTR(led, 0664, led_show, led_store);
 static struct kobj_attribute temp_attribute = __ATTR(temp, 0444, temp_show, NULL);  // TAREFA 5: attr de temperatura
 static struct kobj_attribute hum_attribute = __ATTR(hum, 0444, hum_show, NULL);   // TAREFA 5: attr de umidade
@@ -56,12 +58,14 @@ static struct attribute *attrs[] = {
     NULL, // Fim da lista
 };
 
+// attribute_group agrupa todos os arquivos para criar de uma so vez
 static struct attribute_group attr_group = {
     .attrs = attrs,
 };
 
 
 // --- Estrutura do Driver USB ---
+// struct para registrar o nosso drivr no usb do linux, conectando os eventos as funcoes
 static struct usb_driver smartlamp_driver = {
     .name        = "smartlamp",
     .probe       = usb_probe,
@@ -83,7 +87,8 @@ cat /sys/kernel/smartlamp/ldr                      = LER o valor do LDR
 */
 
 // TAREFA 5: Função unificada para enviar um comando e receber a resposta
-// Tentativa de simplificar o codigo
+// Na tentativa de simplificar o codigo
+// foi criado essa funcao principal para o driver
 static int smartlamp_transaction(const char* command, char *response_buf) {
     int ret, actual_size;
     int retries = 5;
@@ -96,6 +101,7 @@ static int smartlamp_transaction(const char* command, char *response_buf) {
     if (ret < 0) { printk(KERN_ERR "SmartLamp: Falha ao ativar a UART. Erro: %d\n", ret); return ret; }
 
     // Envia o comando
+    // usa o usbbulkmsg com usbsendbulkpipe para enviar o comando solicitado
     strncpy(usb_out_buffer, command, usb_max_size);
     ret = usb_bulk_msg(smartlamp_device, usb_sndbulkpipe(smartlamp_device, usb_out),
                        usb_out_buffer, strlen(command), &actual_size, 1000);
@@ -104,6 +110,7 @@ static int smartlamp_transaction(const char* command, char *response_buf) {
     msleep(100);
 
     // Tenta ler a resposta em um laço para lidar com erros como EAGAIN (-11)
+    // assim, caso o disp. por algum motive nao responder, ele vai  tentar de novo
     while (retries-- > 0) {
         ret = usb_bulk_msg(smartlamp_device, usb_rcvbulkpipe(smartlamp_device, usb_in),
                            response_buf, MAX_RECV_LINE - 1, &actual_size, 1000);
@@ -111,13 +118,14 @@ static int smartlamp_transaction(const char* command, char *response_buf) {
             response_buf[actual_size] = '\0';
             return 0; // Sucesso
         }
-        msleep(50);
+        msleep(50); // intervalo
     }
     printk(KERN_ERR "SmartLamp: Falha ao ler resposta para '%s'. Erro final: %d\n", command, ret);
     return ret;
 }
 
 // Executado quando o dispositivo é conectado na USB
+// e faz toda a config inicial
 static int usb_probe(struct usb_interface *interface, const struct usb_device_id *id) {
     struct usb_endpoint_descriptor *usb_endpoint_in, *usb_endpoint_out;
     printk(KERN_INFO "SmartLamp: Dispositivo conectado ...\n");
@@ -131,6 +139,7 @@ static int usb_probe(struct usb_interface *interface, const struct usb_device_id
     usb_max_size = usb_endpoint_maxp(usb_endpoint_in);
     usb_in = usb_endpoint_in->bEndpointAddress;
     usb_out = usb_endpoint_out->bEndpointAddress;
+    // aloca a memoria para os buffers
     usb_in_buffer = kmalloc(usb_max_size, GFP_KERNEL);
     usb_out_buffer = kmalloc(usb_max_size, GFP_KERNEL);
 
@@ -162,16 +171,21 @@ static int usb_probe(struct usb_interface *interface, const struct usb_device_id
 
 // Executado quando o dispositivo USB é desconectado da USB
 static void usb_disconnect(struct usb_interface *interface) {
-    kobject_put(smartlamp_kobj); // Adicionado para remover a interface sysfs
+    // remove os arquivos e dir
+    kobject_put(smartlamp_kobj); //  remover a interface sysfs
     printk(KERN_INFO "SmartLamp: Dispositivo desconectado.\n");
+    //libera a memoria dos buffers
     kfree(usb_in_buffer);
     kfree(usb_out_buffer);
-    smartlamp_device = NULL; // Adicionado para segurança e prevenção de crashes
+    smartlamp_device = NULL; // segurança e prevenção de crashes, limpa o ponteiro
 }
 
 // --- Funcao do Sysfs adicionadas ---
 
 // Função chamada quando o arquivo /sys/kernel/smartlamp/led é lido
+// callback do sysfs
+// show = leitura, todas as funcoes de leitura do sysfs sao chamadas na funcao principal
+// formata a leitura para o usuario
 static ssize_t led_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
     int value = -1;
     if (!smartlamp_device) return -ENODEV;
@@ -185,17 +199,19 @@ static ssize_t led_show(struct kobject *kobj, struct kobj_attribute *attr, char 
 }
 
 // Função chamada quando algo é escrito no arquivo /sys/kernel/smartlamp/led
+// funcao de escrita
 static ssize_t led_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) {
     int new_value; // A variável 'ret' não é mais necessária aqui
     char command[32];
 
     if (!smartlamp_device) return -ENODEV;
+    // converte o texto do usuario para um numero
     if (kstrtoint(buf, 10, &new_value) != 0) return -EINVAL;
 
     printk(KERN_INFO "SmartLamp: Alterando valor do LED para %d\n", new_value);
 
-    // O bloco antigo de usb_control_msg e usb_bulk_msg foi substituido 
-    // pela chamada a função de transação unificada, que é mais robusta.
+    // O bloco de usb_control_msg e usb_bulk_msg foi substituido 
+    // pela chamada de funcao principal unificada
 
     // Monta o comando a ser enviado
     snprintf(command, sizeof(command), "SET_LED %d\n", new_value);
