@@ -1,0 +1,17 @@
+###---Esquema de Pinagens Smartlamp---
+
+## Gerais
+- Pino +3.3V conectado ao jumper vermelho;
+- Pino GND conectado ao jumper preto;
+
+## DHT11
+- Pino GPIO23 conectado ao DATA do DHT11;
+- Resistor 10KΩ.
+
+## LDR
+- Pino GPIO34 para passagens de dados da luminosidade;
+- Resistor 10KΩ.
+
+## LED
+- Pino GPIO5;
+- Resistor 220Ω.
