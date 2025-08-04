@@ -2,18 +2,20 @@
 
 ## Gerais
 - Pino +3.3V conectado ao jumper vermelho;
-- Pino GND conectado ao jumper preto;
+- Pino GND conectado ao jumper preto.
 
 ## DHT11
 - Pino DATA conectado ao GPIO23 do ESP32;
 - Pino VCC conectado ao 3.3V;
 - GND conectando ao GND do ESP32;
-- Resistor 220Ω entre o VCC e DATA;
+- Resistor 220Ω entre o VCC e DATA.
  
 ## LDR
 - Pino GPIO34 para passagens de dados da luminosidade;
-- Resistor 10KΩ.
+- Pino VCC conectado ao 3.3V;
+- Resistor 10KΩ entre o GPIO34 e GND.
 
 ## LED
 - Pino GPIO5;
-- Resistor 220Ω.
+- Pino Catodo conectado ao GND;
+- Resistor 220Ω entre o LED Anodo e o GPIO5.
