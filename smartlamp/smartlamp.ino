@@ -4,13 +4,12 @@
 
 #define DHTTYPE DHT11
 
-
 int ledPin = 5;
 int ledValue = 10; // 10 de 255, convertido = 4
-int dhtPin = 27;
+int dhtPin = 15;
 int ldrPin = 34;
-int ldrMax = 4000;
-int dhtMax = 4000;
+int ldrMax = 4045;
+// int dhtMax = 4045;
 
 
 DHT dht(dhtPin, DHTTYPE);
@@ -20,12 +19,13 @@ void setup() {
     pinMode(ledPin, OUTPUT);
     pinMode(ldrPin, INPUT);
     dht.begin();
-    delay(1000); // delay pro dht estabilizar
+    delay(2000); // delay pro dht estabilizar
+    processCommand("GET_TEMP");
+    processCommand("GET_HUM");
     Serial.println("SmartLamp Initialized and Ready.");
 }
 
-void loop() {
-    delay(200);  
+void loop() { 
     if (Serial.available()) {
         String command = Serial.readStringUntil('\n');
         command.trim();
@@ -81,9 +81,11 @@ int ledGetValue() {
 
 int ldrGetValue() {
     int ldrValue = analogRead(ldrPin);
-    if (ldrValue < 0) return 0;
-    if (ldrValue > ldrMax) return 100;
-    return (int)(ldrValue * 100) / 4000;
+    // if (ldrValue < 0) return 0;
+    // if (ldrValue > ldrMax) return 100;
+    // return (int)(ldrValue * 100) / 4000;
+    int ldrNormalizedValue = map(ldrValue, 0, 4045, 0, 100);
+    return ldrNormalizedValue;
 }
 
 float tempGetValue(){
