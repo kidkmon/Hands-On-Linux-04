@@ -39,8 +39,8 @@ static int  usb_read_serial(void);
 // Adicionados protótipos para as funções do sysfs
 static ssize_t led_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count);
 static ssize_t led_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf);
-static ssize_t temp_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
-static ssize_t hum_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+static ssize_t temp_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf);
+static ssize_t hum_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf);
 
 
 // --- Definições do Sysfs (Adicionado) ---
