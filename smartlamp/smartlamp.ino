@@ -6,9 +6,9 @@
 
 
 int ledPin = 5;
-int ledValue = 10;
-int dhtPin = 15;
-int ldrPin = 4;
+int ledValue = 10; // 10 de 255, convertido = 4
+int dhtPin = 27;
+int ldrPin = 34;
 int ldrMax = 4000;
 int dhtMax = 4000;
 
@@ -20,16 +20,23 @@ void setup() {
     pinMode(ledPin, OUTPUT);
     pinMode(ldrPin, INPUT);
     dht.begin();
+    delay(1000); // delay pro dht estabilizar
     Serial.println("SmartLamp Initialized and Ready.");
 }
 
 void loop() {
-    delay(2000);  
+    delay(200);  
     if (Serial.available()) {
         String command = Serial.readStringUntil('\n');
-        command.trim(); // Remove espaços em branco extras
+        command.trim();
         processCommand(command);
-    }  
+
+        // consome qualquer dado residual (eco/lixo) do buffer
+        // para garantir que o comando não seja lido novamente em loop.
+        while (Serial.available()) {
+            Serial.read();
+        }
+    }
     
 }
 
@@ -51,10 +58,10 @@ void processCommand(String command) {
         Serial.printf("RES GET_LDR %d\n", ldrGetValue());
     }
     else if (command == "GET_TEMP") {
-        Serial.printf("RES GET_TEMP %f\n", tempGetValue());
+        Serial.printf("RES GET_TEMP %.2f\n", tempGetValue());
     }
     else if (command == "GET_HUM") {
-        Serial.printf("RES GET_HUM %f\n", humGetValue());
+        Serial.printf("RES GET_HUM %.2f\n", humGetValue());
     }
     else {
         Serial.println("ERR Unknown command.");
