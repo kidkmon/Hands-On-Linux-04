@@ -24,12 +24,12 @@ Bem-vindo ao repositório da Equipe 04 do HandsON de Linux do DevTITANS! Este pr
 <img src="https://github.com/DevTITANS05/Hands-On-Linux-fork-/assets/21023906/85e61f3e-476c-47a4-82d5-4054e856c67b" width="180" >
 <img src="https://github.com/DevTITANS05/Hands-On-Linux-fork-/assets/21023906/85e61f3e-476c-47a4-82d5-4054e856c67b" width="180" >
 -->
-- **Alexandre Bruno:** Desenvolvedor do Firmware
-- **Arthur Douglas** Desenvolvedor do Driver Linux
+- **Alexandre Bruno:** Desenvolvedor do Firmware e Escritor da Documentação
+- **Arthur Douglas** Desenvolvedor do Driver Linux e Escritor da Documentação
 - **Helen Reis** Desenvolvedora do Firmware e Escritora da Documentação
 - **Kid Mendes** Desenvolvedor do Driver Linux, Escritor da Documentação e Mantenedor do Projeto
 - **Matheus Fernandes** Desenvolvedor do Firmware, Driver Linux e Escritor da Documentação
-- **Tarcísio Marinho** Desenvolvedor do Firmware
+- **Tarcísio Marinho** Desenvolvedor do Firmware e Escritor da Documentação
 
 ## Introdução
 
